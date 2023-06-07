@@ -25,6 +25,15 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     await client.connect();
+
+    const bannerCollection = client.db("summer-camp").collection("banners");
+
+    //banner routes
+    app.get("/banner", async (req, res) => {
+      const banner = await bannerCollection.find().toArray();
+      res.send(banner);
+    });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
