@@ -27,11 +27,24 @@ async function run() {
     await client.connect();
 
     const bannerCollection = client.db("summer-camp").collection("banners");
+    const userCollection = client.db("summer-camp").collection("users");
 
     //banner routes
     app.get("/banner", async (req, res) => {
       const banner = await bannerCollection.find().toArray();
       res.send(banner);
+    });
+
+    //normal user routes
+    app.get("/users", async (req, res) => {
+      const users = await userCollection.find().toArray();
+      res.send(users);
+    });
+
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      const saveUser = await userCollection.insertOne(user);
+      res.send(saveUser);
     });
 
     // Send a ping to confirm a successful connection
