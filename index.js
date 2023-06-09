@@ -28,6 +28,9 @@ async function run() {
 
     const bannerCollection = client.db("summer-camp").collection("banners");
     const userCollection = client.db("summer-camp").collection("users");
+    const instructorCollection = client
+      .db("summer-camp")
+      .collection("instructors");
 
     //banner routes
     app.get("/banner", async (req, res) => {
@@ -45,6 +48,30 @@ async function run() {
       const user = req.body;
       const saveUser = await userCollection.insertOne(user);
       res.send(saveUser);
+    });
+
+    //instructors route
+    app.get("/instructors", async (req, res) => {
+      const email = req.query.email;
+
+      if (!email) {
+        const getAllInstructor = await instructorCollection.find().toArray();
+        res.send(getAllInstructor);
+      }
+      if (email) {
+        const getInstructor = await instructorCollection.findOne({
+          email: email,
+        });
+
+        res.send(getInstructor);
+      }
+    });
+
+    app.post("/instructors", async (req, res) => {
+      const instructor = req.body;
+      const savedInstructor = await instructorCollection.insertOne(instructor);
+
+      res.send(savedInstructor);
     });
 
     // Send a ping to confirm a successful connection
