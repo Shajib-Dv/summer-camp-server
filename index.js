@@ -10,7 +10,7 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.bjkbiuu.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -63,6 +63,27 @@ async function run() {
       res.send(saveClasses);
     });
 
+    app.put("/classes/:id", async (req, res) => {
+      const id = req.params.id;
+      const status = req.body;
+
+      const query = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: {
+          status: status.status,
+          feedback: status.feedback,
+        },
+      };
+      const updatedClass = await classCollection.updateOne(
+        query,
+        updateDoc,
+        options
+      );
+
+      res.send(updatedClass);
+    });
+
     //normal user routes
     app.get("/users", async (req, res) => {
       const users = await userCollection.find().toArray();
@@ -89,6 +110,20 @@ async function run() {
         options
       );
       res.send(saveUser);
+    });
+
+    app.patch("/users/:id", async (req, res) => {
+      const role = req.body.role;
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          role: role,
+        },
+      };
+      const updatedUser = await userCollection.updateOne(query, updateDoc);
+
+      res.send(updatedUser);
     });
 
     //instructors route
