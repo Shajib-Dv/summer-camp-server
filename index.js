@@ -27,6 +27,7 @@ async function run() {
     await client.connect();
 
     const bannerCollection = client.db("summer-camp").collection("banners");
+    const classCollection = client.db("summer-camp").collection("classes");
     const userCollection = client.db("summer-camp").collection("users");
     const instructorCollection = client
       .db("summer-camp")
@@ -38,15 +39,55 @@ async function run() {
       res.send(banner);
     });
 
+    //classes route
+    app.get("/classes", async (req, res) => {
+      const email = req.query.email;
+
+      if (!email) {
+        const classes = await classCollection.find().toArray();
+        res.send(classes);
+      }
+
+      if (email) {
+        const classes = await classCollection
+          .find({ instructorEmail: email })
+          .toArray();
+        res.send(classes);
+      }
+    });
+
+    app.post("/classes", async (req, res) => {
+      const classes = req.body;
+      const saveClasses = await classCollection.insertOne(classes);
+
+      res.send(saveClasses);
+    });
+
     //normal user routes
     app.get("/users", async (req, res) => {
       const users = await userCollection.find().toArray();
       res.send(users);
     });
 
-    app.post("/users", async (req, res) => {
+    app.get("/users/:email", async (req, res) => {
+      const email = req.params.email;
+      const user = await userCollection.findOne({ email: email });
+
+      res.send(user);
+    });
+
+    app.put("/users", async (req, res) => {
       const user = req.body;
-      const saveUser = await userCollection.insertOne(user);
+      const query = { email: user.email };
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: user,
+      };
+      const saveUser = await userCollection.updateOne(
+        query,
+        updateDoc,
+        options
+      );
       res.send(saveUser);
     });
 
