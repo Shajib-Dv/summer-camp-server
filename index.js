@@ -27,6 +27,9 @@ async function run() {
     await client.connect();
 
     const bannerCollection = client.db("summer-camp").collection("banners");
+    const enrolledClassCollection = client
+      .db("summer-camp")
+      .collection("enrolledClasses");
     const classCollection = client.db("summer-camp").collection("classes");
     const userCollection = client.db("summer-camp").collection("users");
     const instructorCollection = client
@@ -56,11 +59,73 @@ async function run() {
       }
     });
 
+    app.get("/enrolled", async (req, res) => {
+      const email = req.query.email;
+
+      if (!email) {
+        const classes = await enrolledClassCollection.find().toArray();
+        res.send(classes);
+      }
+
+      if (email) {
+        const classes = await enrolledClassCollection
+          .find({ email: email })
+          .toArray();
+        res.send(classes);
+      }
+    });
+
+    app.put("/enrolled/:id", async (req, res) => {
+      const id = req.params.id;
+      const classes = req.body;
+      const query = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+
+      const updateDoc = {
+        $set: classes,
+      };
+
+      const enrolled = await enrolledClassCollection.updateOne(
+        query,
+        updateDoc,
+        options
+      );
+
+      res.send(enrolled);
+    });
+
     app.post("/classes", async (req, res) => {
       const classes = req.body;
       const saveClasses = await classCollection.insertOne(classes);
 
       res.send(saveClasses);
+    });
+
+    app.patch("/classes/seat/:id", async (req, res) => {
+      const id = req.params.id;
+      const classInfo = req.body;
+
+      const existUser = await enrolledClassCollection
+        .find({
+          email: classInfo?.email,
+        })
+        .toArray();
+
+      const match = existUser.find((item) => item.classId === id);
+
+      if (match) {
+        return res.send({ message: "class already enrolled" });
+      }
+
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          availableSeats: classInfo.availableSeats - 1,
+        },
+      };
+      const updatedClass = await classCollection.updateOne(query, updateDoc);
+
+      res.send(updatedClass);
     });
 
     app.put("/classes/:id", async (req, res) => {
@@ -184,6 +249,16 @@ async function run() {
       const deletedInstructor = await instructorCollection.deleteOne(query);
 
       res.send(deletedInstructor);
+    });
+
+    //classes by instructor TODO:
+    app.get("/instructor-class/:email", async (req, res) => {
+      const email = req.params.email;
+      const classes = await classCollection
+        .find({ instructorEmail: email })
+        .toArray();
+
+      res.send(classes);
     });
 
     // Send a ping to confirm a successful connection
