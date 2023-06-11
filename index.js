@@ -4,6 +4,7 @@ const express = require("express");
 const cors = require("cors");
 const app = express();
 require("dotenv").config();
+const stripe = require("stripe")(process.env.STRIPE_SK);
 const port = process.env.PORT || 5000;
 
 //middleware
@@ -13,7 +14,6 @@ app.use(express.json());
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.bjkbiuu.mongodb.net/?retryWrites=true&w=majority`;
 
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -31,6 +31,7 @@ async function run() {
       .db("summer-camp")
       .collection("enrolledClasses");
     const classCollection = client.db("summer-camp").collection("classes");
+    const paymentCollection = client.db("summer-camp").collection("payments");
     const userCollection = client.db("summer-camp").collection("users");
     const instructorCollection = client
       .db("summer-camp")
@@ -78,14 +79,6 @@ async function run() {
       res.send(enrolled);
     });
 
-    app.delete("/enrolled/:id", async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const deletedClass = await enrolledClassCollection.deleteOne(query);
-
-      res.send(deletedClass);
-    });
-
     //classes route
     app.get("/classes", async (req, res) => {
       const email = req.query.email;
@@ -108,33 +101,6 @@ async function run() {
       const saveClasses = await classCollection.insertOne(classes);
 
       res.send(saveClasses);
-    });
-
-    app.patch("/classes/seat/:id", async (req, res) => {
-      const id = req.params.id;
-      const classInfo = req.body;
-
-      const existUser = await enrolledClassCollection
-        .find({
-          email: classInfo?.email,
-        })
-        .toArray();
-
-      const match = existUser.find((item) => item.classId === id);
-
-      if (match) {
-        return res.send({ message: "class already enrolled" });
-      }
-
-      const query = { _id: new ObjectId(id) };
-      const updateDoc = {
-        $set: {
-          availableSeats: classInfo.availableSeats - 1,
-        },
-      };
-      const updatedClass = await classCollection.updateOne(query, updateDoc);
-
-      res.send(updatedClass);
     });
 
     app.put("/classes/:id", async (req, res) => {
@@ -217,17 +183,26 @@ async function run() {
     //instructors route
     app.get("/instructors", async (req, res) => {
       const email = req.query.email;
+      const role = req.query.role;
 
-      if (!email) {
-        const getAllInstructor = await instructorCollection.find().toArray();
-        res.send(getAllInstructor);
-      }
-      if (email) {
-        const getInstructor = await instructorCollection.findOne({
-          email: email,
-        });
-
-        res.send(getInstructor);
+      try {
+        if (role) {
+          const instructor = await userCollection
+            .find({ role: role })
+            .toArray();
+          res.send(instructor);
+        } else if (email) {
+          const getInstructor = await instructorCollection.findOne({
+            email: email,
+          });
+          res.send(getInstructor);
+        } else {
+          const getAllInstructors = await instructorCollection.find().toArray();
+          res.send(getAllInstructors);
+        }
+      } catch (error) {
+        console.error(error);
+        res.status(500).send("Internal Server Error");
       }
     });
 
@@ -260,14 +235,52 @@ async function run() {
       res.send(deletedInstructor);
     });
 
-    //classes by instructor TODO:
-    app.get("/instructor-class/:email", async (req, res) => {
+    //payment
+    app.get("/payment/:email", async (req, res) => {
       const email = req.params.email;
-      const classes = await classCollection
-        .find({ instructorEmail: email })
+      const paymentDetail = await paymentCollection
+        .find({ email: email })
         .toArray();
 
-      res.send(classes);
+      res.send(paymentDetail);
+    });
+
+    app.post("/create-payment-intent", async (req, res) => {
+      const { price } = req.body;
+      const amount = parseInt(price * 100);
+      // console.log(amount);
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+
+    app.post("/payment", async (req, res) => {
+      const paymentDetail = req.body;
+      const userId = paymentDetail.userId;
+      const classId = paymentDetail.classId;
+
+      const updateQuery = { _id: new ObjectId(classId) };
+
+      const updateDoc = { $inc: { availableSeats: -1 } };
+
+      const insertedResult = await paymentCollection.insertOne(paymentDetail);
+
+      const updateResult = await classCollection.updateOne(
+        updateQuery,
+        updateDoc
+      );
+
+      const deleteResult = await enrolledClassCollection.deleteOne({
+        _id: new ObjectId(userId),
+      });
+
+      res.send({ insertedResult, updateResult, deleteResult });
     });
 
     // Send a ping to confirm a successful connection
