@@ -42,23 +42,7 @@ async function run() {
       res.send(banner);
     });
 
-    //classes route
-    app.get("/classes", async (req, res) => {
-      const email = req.query.email;
-
-      if (!email) {
-        const classes = await classCollection.find().toArray();
-        res.send(classes);
-      }
-
-      if (email) {
-        const classes = await classCollection
-          .find({ instructorEmail: email })
-          .toArray();
-        res.send(classes);
-      }
-    });
-
+    //enroll related route
     app.get("/enrolled", async (req, res) => {
       const email = req.query.email;
 
@@ -92,6 +76,31 @@ async function run() {
       );
 
       res.send(enrolled);
+    });
+
+    app.delete("/enrolled/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const deletedClass = await enrolledClassCollection.deleteOne(query);
+
+      res.send(deletedClass);
+    });
+
+    //classes route
+    app.get("/classes", async (req, res) => {
+      const email = req.query.email;
+
+      if (!email) {
+        const classes = await classCollection.find().toArray();
+        res.send(classes);
+      }
+
+      if (email) {
+        const classes = await classCollection
+          .find({ instructorEmail: email })
+          .toArray();
+        res.send(classes);
+      }
     });
 
     app.post("/classes", async (req, res) => {
