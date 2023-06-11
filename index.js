@@ -104,6 +104,12 @@ async function run() {
       const updateDoc = {
         $set: user,
       };
+
+      const storedUser = await userCollection.findOne(query);
+      if (user.email === storedUser?.email) {
+        return res.send({ message: "user already exist !" });
+      }
+
       const saveUser = await userCollection.updateOne(
         query,
         updateDoc,
@@ -124,6 +130,14 @@ async function run() {
       const updatedUser = await userCollection.updateOne(query, updateDoc);
 
       res.send(updatedUser);
+    });
+
+    app.delete("/users/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const deletedUser = await userCollection.deleteOne(query);
+
+      res.send(deletedUser);
     });
 
     //instructors route
@@ -148,6 +162,28 @@ async function run() {
       const savedInstructor = await instructorCollection.insertOne(instructor);
 
       res.send(savedInstructor);
+    });
+
+    app.patch("/instructor/:email", async (req, res) => {
+      const role = req.body.role;
+      const email = req.params.email;
+      const query = { email: email };
+      const updateDoc = {
+        $set: {
+          role: role,
+        },
+      };
+      const updatedUser = await userCollection.updateOne(query, updateDoc);
+
+      res.send(updatedUser);
+    });
+
+    app.delete("/instructor/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const deletedInstructor = await instructorCollection.deleteOne(query);
+
+      res.send(deletedInstructor);
     });
 
     // Send a ping to confirm a successful connection
