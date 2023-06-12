@@ -207,17 +207,13 @@ async function run() {
       res.send(users);
     });
 
-    app.get(
-      "/users/:email",
-      verifyJWT,
-      verifyAdminOrInstructor,
-      async (req, res) => {
-        const email = req.params.email;
-        const user = await userCollection.findOne({ email: email });
+    //for check user role
+    app.get("/users/:email", verifyJWT, async (req, res) => {
+      const email = req.params.email;
+      const user = await userCollection.findOne({ email: email });
 
-        res.send(user);
-      }
-    );
+      res.send(user);
+    });
 
     app.put("/users", verifyJWT, verifyAdminOrInstructor, async (req, res) => {
       const user = req.body;
