@@ -109,43 +109,33 @@ async function run() {
       }
     });
 
-    app.put(
-      "/enrolled/:id",
-      verifyJWT,
-      verifyAdminOrInstructor,
-      async (req, res) => {
-        const id = req.params.id;
-        const classes = req.body;
-        const query = { _id: new ObjectId(id) };
-        const options = { upsert: true };
+    app.put("/enrolled/:id", verifyJWT, async (req, res) => {
+      const id = req.params.id;
+      const classes = req.body;
+      const query = { _id: new ObjectId(id) };
+      const options = { upsert: true };
 
-        const updateDoc = {
-          $set: classes,
-        };
+      const updateDoc = {
+        $set: classes,
+      };
 
-        const enrolled = await enrolledClassCollection.updateOne(
-          query,
-          updateDoc,
-          options
-        );
+      const enrolled = await enrolledClassCollection.updateOne(
+        query,
+        updateDoc,
+        options
+      );
 
-        res.send(enrolled);
-      }
-    );
+      res.send(enrolled);
+    });
 
-    app.delete(
-      "/enrolled/:id",
-      verifyJWT,
-      verifyAdminOrInstructor,
-      async (req, res) => {
-        const id = req.params.id;
-        const deletedDoc = await enrolledClassCollection.deleteOne({
-          _id: new ObjectId(id),
-        });
+    app.delete("/enrolled/:id", verifyJWT, async (req, res) => {
+      const id = req.params.id;
+      const deletedDoc = await enrolledClassCollection.deleteOne({
+        _id: new ObjectId(id),
+      });
 
-        res.send(deletedDoc);
-      }
-    );
+      res.send(deletedDoc);
+    });
 
     //classes route v/n
     app.get("/classes", async (req, res) => {
@@ -202,7 +192,7 @@ async function run() {
     });
 
     //normal user routes
-    app.get("/users", verifyJWT, verifyAdminOrInstructor, async (req, res) => {
+    app.get("/users", verifyJWT, async (req, res) => {
       const users = await userCollection.find().toArray();
       res.send(users);
     });
@@ -215,7 +205,7 @@ async function run() {
       res.send(user);
     });
 
-    app.put("/users", verifyJWT, verifyAdminOrInstructor, async (req, res) => {
+    app.put("/users", verifyJWT, async (req, res) => {
       const user = req.body;
       const query = { email: user.email };
       const options = { upsert: true };
