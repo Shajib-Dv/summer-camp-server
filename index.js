@@ -198,14 +198,14 @@ async function run() {
     });
 
     //for check user role
-    app.get("/users/:email", verifyJWT, async (req, res) => {
+    app.get("/users/:email", async (req, res) => {
       const email = req.params.email;
       const user = await userCollection.findOne({ email: email });
 
       res.send(user);
     });
 
-    app.put("/users", verifyJWT, async (req, res) => {
+    app.put("/users", async (req, res) => {
       const user = req.body;
       const query = { email: user.email };
       const options = { upsert: true };
